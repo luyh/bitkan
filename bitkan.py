@@ -13,11 +13,8 @@ class Bitkan(Chrome):
         self.cookies = None
 
     def login(self):
-        self.driver.add_cookie(self.cookies)
-        url = 'https://bitkan.pro/zh/account/login'
-        self.driver.get(url)
-        cookies = None
-        print('请自行登陆')
+        self.driver.get(self.start_url)
+        print('请检查自行登陆')
 
     def get_cookies(self):
         cookies = self.driver.get_cookies()
@@ -44,35 +41,35 @@ class Bitkan(Chrome):
         self.driver.refresh()
 
     def get_price(self):
-        ask = self.driver.find_elements_by_css_selector('div.bktrade-component-handicap-asks.ng-star-inserted > div > div:nth-child > div.bktrade-component-handicap-tr-td.bktrade-component-handicap-logo > span').text
-        bid = self.driver.find_elements_by_css_selector('div.bktrade-component-handicap-bids.ng-star-inserted > div > div:nth-child > div.bktrade-component-handicap-tr-td.bktrade-component-handicap-logo > span').text
+        #todo:获取并解析所有行情数据，包括交易所，报价，数量，成交历史
+        ask = self.driver.find_element_by_css_selector(
+            'div.bktrade-component-handicap-asks.ng-star-inserted > div > div:nth-child(25) > div.bktrade-component-handicap-tr-td.bktrade-component-handicap-logo > span').text
+        bid = self.driver.find_element_by_css_selector(
+            'div.bktrade-component-handicap-bids.ng-star-inserted > div > div:nth-child(1) > div.bktrade-component-handicap-tr-td.bktrade-component-handicap-logo > span').text
 
         return float(ask) , float(bid)
 
     def trade(self,type,price,amount):
-        if type == 'buy':
-            price_input_selector = 'div.bktrade-response-tab-content > bktrade-component-action-pane > bk-form > form > div:nth-child(2) > bk-input > div > div > input'
-            amount_input_selector = 'div.bktrade-response-tab-content > bktrade-component-action-pane > bk-form > form > div:nth-child(3) > bk-input > div > div > input'
-            confirm_selector = 'div.bktrade-response-tab-content > bktrade-component-action-pane > bk-form > form > div.bktrade-component-action-pane-submit > bk-button > button'
-        elif type == 'sell':
-            price_input_selector = 'bktrade-response-tab:nth-child(2) > div > bktrade-component-action-pane > bk-form > form > div:nth-child(2) > bk-input > div > div > input'
-            amount_input_selector = 'bktrade-response-tab:nth-child(2) > div > bktrade-component-action-pane > bk-form > form > div:nth-child(3) > bk-input > div > div > input'
-            confirm_selector = 'bktrade-response-tab:nth-child(2) > div > bktrade-component-action-pane > bk-form > form > div.bktrade-component-action-pane-submit > bk-button > button'
-        else:
-            print('trade type error')
-            return
 
-        price_input = self.driver.find_element_by_css_selector(price_input_selector)
-        amount_input = self.driver.find_element_by_css_selector(amount_input_selector)
-        confirm = self.driver.find_element_by_css_selector(confirm_selector)
+        price_input_xpath = '//bktrade-response-tab[{}]/div/div[2]/bktrade-component-action-pane/bk-form/form/div[2]/bk-input/div/div/input'.format(1 if type=='buy' else 2)
+        amount_input_xpath = '//bktrade-response-tab[{}]/div/div[2]/bktrade-component-action-pane/bk-form/form/div[3]/bk-input/div/div/input'.format(1 if type=='buy' else 2)
+        value_input_xpath = '//bktrade-response-tab[{}]/div/div[2]/bktrade-component-action-pane/bk-form/form/div[5]/bk-input/div/div/input'.format(1 if type=='buy' else 2)
+        confirm_xpath = '//div/bktrade-response-tab[{}]/div/div[2]/bktrade-component-action-pane/bk-form/form/div[6]/bk-button/button'.format(1 if type=='buy' else 2)
+
+        price_input = self.driver.find_element_by_xpath(price_input_xpath)
+        amount_input = self.driver.find_element_by_xpath(amount_input_xpath)
+        value_input = self.driver.find_element_by_xpath(value_input_xpath)
+        confirm = self.driver.find_element_by_xpath(confirm_xpath)
 
         price_input.clear()
-        price_input.click()
         price_input.send_keys(price)
 
         amount_input.clear()
         amount_input.click()
         amount_input.send_keys(str(amount))
+
+        value_input.clear()
+        value_input.send_keys(str(price * amount))
 
         confirm.click()
 
@@ -87,17 +84,11 @@ if __name__ == '__main__':
     bitkan.login()
     time.sleep(3)
 
-    cookies = bitkan.driver.get_cookies()
-    print(cookies)
+    ask, bid = bitkan.get_price()
+    print(ask,bid,)
 
-    bitkan.driver.delete_all_cookies()
-
-    bitkan.driver.add_cookie(cookies)
-
-
-
-    bitkan.trade('buy',1000,0.001)
-    bitkan.trade('sell',100000, 0.001)
+    bitkan.trade('buy',1000,0.003)
+    bitkan.trade('sell',100000, 0.003)
     diffs = {}
     while True:
         try:
